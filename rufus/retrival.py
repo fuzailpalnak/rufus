@@ -12,11 +12,15 @@ from rufus.web_scrape import scrape
 
 class Retrieval:
     def __init__(self, api_token: str):
-        self._embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"},
-            encode_kwargs={"normalize_embeddings": True},
-        )
+        self._vector_store = None
+
+    @property
+    def vector_store(self):
+        return self._vector_store
+
+    @vector_store.setter
+    def vector_store(self, value):
+        self._vector_store = value
 
     @staticmethod
     def chunk_text(
@@ -39,35 +43,47 @@ class Retrieval:
 
         return content
 
-    def create_retriever(self, chunks: List[str]) -> FAISS:
-        faiss_store = FAISS.from_texts(chunks, self._embeddings)
-        return faiss_store
+    @staticmethod
+    def get_embeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2",
+        normalize_embeddings=True,
+        **kwargs
+    ):
+        return HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=kwargs,
+            encode_kwargs={"normalize_embeddings": normalize_embeddings},
+        )
+
+    def create_vector_store(self, chunks: List[str], embeddings: HuggingFaceEmbeddings):
+        self.vector_store = FAISS.from_texts(chunks, embeddings)
 
     def create_chain(
         self, urls: List[str], chunk_size: int = 1500, chunk_overlap: int = 64
     ):
         content = self.extract_content(urls)
-        vector_store = self.create_retriever(
-            self.chunk_text(content, chunk_size, chunk_overlap)
+        self.create_vector_store(
+            self.chunk_text(content, chunk_size, chunk_overlap),
+            embeddings=self.get_embeddings(device="cpu"),
         )
 
-        print(vector_store.similarity_search("What are the Focus areas ?", k=7))
-        # self.rag = RetrievalQA.from_chain_type(
-        #     llm=self._llm,
-        #     chain_type="stuff",
-        #     retriever=content_retriever,
-        #     return_source_documents=True
-        # )
+    def scrape(self, instructions: str):
+        information = dict()
+        results = self.vector_store.similarity_search(instructions, k=7)
 
-    # def scrape(self, instructions: str):
-    #     return self.rag.run(instructions)
+        for i, result in enumerate(results):
+            information[f"Result {i}"] = result.page_content.replace('\n', ' ')
+
+        print(information)
+
+urls = ["https://www.joanneum.at/en/"]
 
 
-retrival = Retrieval(api_token="None")
-retrival.create_chain(
-    [
-        "https://www.tugraz.at/en/studying-and-teaching/degree-and-certificate-programmes/masters-degree-programmes/computer-science"
-    ]
+retrieval = Retrieval(api_token="None")
+content = retrieval.extract_content(urls)
+retrieval.create_vector_store(
+    retrieval.chunk_text(content, chunk_size=1500, chunk_overlap=64),
+    embeddings=retrieval.get_embeddings(device="cpu"),
 )
 
-# print(retrival.scrape("What are the Focus areas ?"))
+print(retrieval.scrape("What is the Mission ? "))
