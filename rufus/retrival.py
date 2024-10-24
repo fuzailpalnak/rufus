@@ -48,7 +48,7 @@ class Retrieval:
     def get_embeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2",
         normalize_embeddings=True,
-        **kwargs
+        **kwargs,
     ):
         return HuggingFaceEmbeddings(
             model_name=model_name,
@@ -76,7 +76,7 @@ class Retrieval:
             pattern = r'[^a-zA-Z0-9\s.,!?\'"()-\[\]]'
 
             # Remove unwanted characters
-            cleaned_text = re.sub(pattern, '', result.page_content.replace('\n', ' '))
+            cleaned_text = re.sub(pattern, "", result.page_content.replace("\n", " "))
 
             information[f"Result {i}"] = cleaned_text
 
