@@ -95,29 +95,11 @@ async def fetch_multiple_urls(urls):
     return results
 
 
-async def main():
+async def scrape(urls):
     # Reset visited URLs before starting the main function
     global visited_urls
     visited_urls = set()
 
-    results = await fetch_multiple_urls(
-        [
-            "https://www.tugraz.at/en/studying-and-teaching/degree-and-certificate-programmes/masters-degree-programmes/computer-science"
-        ]
-    )
+    results = await fetch_multiple_urls(urls)
 
     return results
-
-
-# Uncomment below to run the script and print the results
-loop = asyncio.get_event_loop()
-if loop.is_running():
-    # Handle the case where the loop is already running (e.g., in Jupyter)
-    tasks = [main()]
-    results = loop.run_until_complete(asyncio.gather(*tasks))
-    for result in results:
-        print(result)
-else:
-    results = loop.run_until_complete(main())
-    for result in results:
-        print(result)
