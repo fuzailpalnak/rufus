@@ -1,4 +1,5 @@
 import asyncio
+import re
 from typing import List
 
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -72,18 +73,11 @@ class Retrieval:
         results = self.vector_store.similarity_search(instructions, k=7)
 
         for i, result in enumerate(results):
-            information[f"Result {i}"] = result.page_content.replace('\n', ' ')
+            pattern = r'[^a-zA-Z0-9\s.,!?\'"()-\[\]]'
 
-        print(information)
+            # Remove unwanted characters
+            cleaned_text = re.sub(pattern, '', result.page_content.replace('\n', ' '))
 
-urls = ["https://www.joanneum.at/en/"]
+            information[f"Result {i}"] = cleaned_text
 
-
-retrieval = Retrieval(api_token="None")
-content = retrieval.extract_content(urls)
-retrieval.create_vector_store(
-    retrieval.chunk_text(content, chunk_size=1500, chunk_overlap=64),
-    embeddings=retrieval.get_embeddings(device="cpu"),
-)
-
-print(retrieval.scrape("What is the Mission ? "))
+        return information
